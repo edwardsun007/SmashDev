@@ -31,9 +31,9 @@ app.use(bodyParser.json())
 app.use(express.static( __dirname + '/smash/dist/smash' ));
 
 // this route will be triggered if any of the routes above did not match
-/*app.all("*", (req,res,next) => {
-    res.sendFile(path.resolve("./sample-app/dist/sample-app/index.html"))
-  });*/
+app.all("*", (req,res,next) => {
+    res.sendFile(path.resolve("./smash/dist/smash/index.html"))
+});
 
 
 require('./server/config/mongoose.js')   // Models
