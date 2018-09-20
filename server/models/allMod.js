@@ -6,14 +6,15 @@ var uniqueValidator = require('mongoose-unique-validator');
 var UserSchema = new mongoose.Schema({
         firstName: {type: String, required: [true, "First name cannot be empty!"], minlength: [3, "First name must have at least 3 characters"]},
         lastName: {type: Number, required: [true, "Last name cannot be empty!"], minlength: [3, "Last name must have at least 3 characters"]},
-        email: {type: String, required: [true, "Review cannot be empty!"],
+        email: {type: String, required: [true, "Email cannot be empty!"],
                 validate:{
                     validator:function(value){
                         var emailRegex = /^([\w-\.]+@([\w-]+\.)+[\w-]{2,4})?$/;
                         return emailRegex.test(value);
                     },
                     message:"Email address is not valid!"
-                }
+                },
+                unique:[true,"Email Already Exists!"]
             },
         password:{
             type:String,
@@ -44,7 +45,14 @@ var teamSchema = new mongoose.Schema({
     //url will just be the same as the name but all lowercase with no spaces
     url : {
         type : String,
-        required : true
+        required : true,
+        unique:[true, "Team URL Already Taken!"]
+    },
+    // purpose of this team: business, entertainment, game, education, technology etc
+    purpose: {
+        type:String,
+        required: [true, "Please Fill In Purpose for this team"],
+        minlength: [5, "Team purpose required to be at least 5 characters long"]
     },
     // One to many relationship. Has many personas (who are users) in a team.
     personas : [{
@@ -57,6 +65,8 @@ var teamSchema = new mongoose.Schema({
         ref : "Channel"
     }]
 }, {timestamps : true})
+
+
 //---------------------- Presave Create channels  (general and random)------------------
 teamSchema.pre('save', function(done){
   if (this.isNew){
@@ -95,7 +105,50 @@ teamSchema.pre('save', function(done){
   }
 });
 
+teamSchema.plugin(uniqueValidator,{message:'Error, {PATH} {VALUE} is already Taken!'});
+
 mongoose.model('Team', teamSchema);
+
+// File
+var fileSchema = new mongoose.Schema({
+
+    _persona : {
+        type : Schema.Types.ObjectId, 
+        ref : "Persona",
+        required : true
+    },
+
+    // File could be for a profile picture hence why I didnt make it required.
+    _post : {
+        type : Schema.Types.ObjectId, 
+        ref : "Post",
+        required : false
+    },
+
+    // File does not neccessarily need a channel!
+    _channel : {
+        type : Schema.Types.ObjectId, 
+        ref : "Channel",
+        required : false
+    },
+
+    filePath : {
+        type : String,
+        required : true
+    },
+   
+    pinned : {
+        type : Boolean,
+        required : true
+    },
+
+    // Boolean field required to help the search feature so that way we can filter out results.. we dont want people look at others stuff :D
+    profilePic : {
+        type: Boolean
+    }
+}, {timestamps:true})    
+
+mongoose.model('File', fileSchema);
 
 /* persona */
 personaSchema = new mongoose.Schema({
@@ -151,6 +204,62 @@ personaSchema.pre('save', function (done) {
 
 mongoose.model('Persona', personaSchema);
 
+
+/*Channel*/   
+var channelSchema = new Schema ({
+
+    name : {
+        type : String,
+        required : true,
+        minlength : [5, 'Minimum length on channel name is 5 characters']
+    },
+
+    purpose : {
+        type: String,
+        required : false,
+        minlength : [10, "Minimum length of a channel purpose is 10 characters"]
+    },
+
+    private : {
+        type : Boolean,
+        required: true
+    },
+
+    //Adding personas to specfic channels.
+    // members = array of Persona
+    members : [{
+        type : Schema.Types.ObjectId,
+        ref : "Persona"
+    }],
+
+    // array of Post
+    posts : [{
+        type : Schema.Types.ObjectId,
+        ref : "Post"
+    }],
+
+    // array of File
+    files : [{
+        type: Schema.Types.ObjectId,
+        ref : "File"
+    }],
+
+    
+    _team : {
+        type : Schema.Types.ObjectId,
+        ref: "Team"
+    }
+
+}, {timestamps : true})
+
+channelSchema.pre('remove', function(next) {
+    var self = this
+    // Remove all the assignment docs that reference the removed channel.
+    Post.remove({ _channel : self._id }).exec();
+    File.remove({_channel : self._id}).exec();
+    next();
+});
+
 /* Post */
 var postSchema = new mongoose.Schema ({
         // post does not require the user to type something... could be a file or link
@@ -174,6 +283,7 @@ var postSchema = new mongoose.Schema ({
             ref : "Channel",
             required : true
         },
+        
         // post does not require user to upload a file each time.
         _file : {
             type : Schema.Types.ObjectId,
@@ -219,62 +329,6 @@ var commentSchema = new mongoose.Schema({
  }, {timestamps : true})
 
 
-
 mongoose.model("Comment", commentSchema);
-
-/*Channel*/   
-var channelSchema = new Schema ({
-
-    name : {
-        type : String,
-        required : true,
-        minlength : [5, 'Minimum length on channel name is 5 characters']
-    },
-    purpose : {
-        type: String,
-        required : false,
-        minlength : [10, "Minimum length of a channel purpose is 10 characters"]
-    },
-
-    private : {
-        type : Boolean,
-        required: true
-    },
-
-    //Adding personas to specfic channels.
-    members : [{
-        type : Schema.Types.ObjectId,
-        ref : "Persona"
-    }],
-
-    posts : [{
-        type : Schema.Types.ObjectId,
-        ref : "Post"
-    }],
-
-    files : [{
-        type: Schema.Types.ObjectId,
-        ref : "File"
-    }],
-
-    _team : {
-        type : Schema.Types.ObjectId,
-        ref: "Team"
-    }
-
-}, {timestamps : true})
-
-channelSchema.pre('remove', function(next) {
-    var self = this
-    // Remove all the assignment docs that reference the removed channel.
-    Post.remove({ _channel : self._id }).exec();
-    File.remove({_channel : self._id}).exec();
-    next();
-});
-
-
-
-
-
 mongoose.model("Channel", channelSchema);
 mongoose.model('Post', postSchema);

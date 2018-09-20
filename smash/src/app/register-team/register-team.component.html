@@ -1,0 +1,16 @@
+<p>
+  register-team works!
+</p>
+
+<form (submit)="onCreate()">
+  <div *ngIf="errorMsg" class="err">
+      <div *ngFor="let err of errorMsg">
+          <p>{{err}}</p>
+      </div>
+  </div>
+  <label for="teamname">Team Name:</label> <input type="text" name="teamname" [(ngModel)]="newTeam.name">
+  <label for="teamURL">Team URL:</label><input type="text" name="teamURL" [(ngModel)]="newTeam.url">
+  <label for="purpose">Purpose:</label><input type="text" name="purpose"  [(ngModel)]="newTeam.purpose">
+  <input type="submit" value="CREATE">
+
+</form>
